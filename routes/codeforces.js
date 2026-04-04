@@ -7,8 +7,12 @@ router.get("/:handle", async (req, res) => {
         const handle = req.params.handle;
 
         const response = await fetch(
-            `https://codeforces.com/api/user.status?handle=${handle}`
+            `https://codeforces.com/api/user.status?handle=${encodeURIComponent(handle)}`
         );
+
+        if (!response.ok) {
+            return res.status(502).json({ error: "Codeforces API unavailable" });
+        }
 
         const data = await response.json();
 
@@ -22,36 +26,38 @@ router.get("/:handle", async (req, res) => {
 
         const uniqueProblems = new Map();
         solved.forEach(sub => {
-            uniqueProblems.set(sub.problem.name, sub.problem);
+            const p = sub.problem;
+            if (!p) return;
+            const key = `${p.contestId}-${p.index}`;
+            uniqueProblems.set(key, p);
         });
 
         const problems = Array.from(uniqueProblems.values());
 
-        //total solved
         const totalSolved = problems.length;
 
         let difficulty = {};
         problems.forEach(p => {
-            if (p.rating) {
+            if (p.rating !== undefined) {
                 difficulty[p.rating] = (difficulty[p.rating] || 0) + 1;
             }
         });
 
         let tags = {};
         problems.forEach(p => {
-            p.tags.forEach(tag => {
-                tags[tag] = (tags[tag] || 0) + 1;
-            });
+            if (p.tags && Array.isArray(p.tags)) {
+                p.tags.forEach(tag => {
+                    tags[tag] = (tags[tag] || 0) + 1;
+                });
+            }
         });
 
-        //save to db
         await User.findOneAndUpdate(
             { handle },
             { handle, totalSolved, difficulty, tags },
-            { upsert: true }
+            { upsert: true, new: true }
         );
 
-        //send response
         res.json({
             handle,
             totalSolved,
@@ -60,7 +66,8 @@ router.get("/:handle", async (req, res) => {
         });
 
     } catch (err) {
-        res.status(500).json({ error: "Error processing data" });
+        console.log(err);
+        res.status(500).json({ error: err.message });
     }
 });
 

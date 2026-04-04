@@ -1,29 +1,27 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const mongoose = require("mongoose");
-require("dotenv").config();
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const app = express();
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
+const authRoutes = require("./routes/auth");
+app.use("/auth", authRoutes);
+
 const codeforcesRoutes = require("./routes/codeforces");
 app.use("/codeforces", codeforcesRoutes);
 
-// Home route
 app.get("/", (req, res) => {
     res.send("CP Tracker API running");
 });
 
-// MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.log(err));
 
-// Start server
-app.listen(5000, () => {
-    console.log("Server running on port 5000");
+app.listen(5001, () => {
+    console.log("Server running on port 5001");
 });

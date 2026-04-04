@@ -27,6 +27,7 @@ router.post("/signup", async (req, res) => {
         res.json({ message: "User created" });
 
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Signup failed" });
     }
 });
@@ -41,6 +42,10 @@ router.post("/login", async (req, res) => {
         const user = await User.findOne({ username });
 
         if (!user) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        if (!user.password) {
             return res.status(401).json({ error: "Invalid credentials" });
         }
 
@@ -67,6 +72,7 @@ router.post("/login", async (req, res) => {
             }
         });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: "Login failed" });
     }
 });
